@@ -69,30 +69,30 @@ The core intelligence is powered by **YOLOv8** trained specifically on textile f
 ## 📈 5. Pipeline Architecture & Workflow
 
 ```
-                        FRONTEND (Streamlit)
-                                 |
-            +--------------------+--------------------+
-            |                    |                    |
-       IMAGE UPLOAD         VIDEO UPLOAD         LIVE CAMERA
-            |                    |                    |
-            +--------------------+--------------------+
-                                 |
-                             HTTP POST
-                                 |
-                        BACKEND (FastAPI)
-                                 |
-                         YOLOv8 + OpenCV
-                                 |
-                             ByteTrack
-                                 |
-                          Defect Analysis
-                                 |
-                        PDF Report Generation
-                                 |
-                             HTTP GET
-                                 |
-                        FRONTEND (Streamlit)
-                                 |
+                        FRONTEND (Streamlit app.py)
+                                     |
+            +------------------------+------------------------+
+            |                        |                        |
+       IMAGE UPLOAD             VIDEO UPLOAD             LIVE CAMERA
+            |                        |                        |
+            +------------------------+------------------------+
+                                     |
+                                 HTTP POST
+                                     |
+                         BACKEND (FastAPI Fast_api.py)
+                                     |
+                           YOLOv8 + OpenCV (src/)
+                                     |
+                                 ByteTrack
+                                     |
+                              Defect Analysis
+                                     |
+                            PDF Report Generation
+                                     |
+                                 HTTP GET
+                                     |
+                        FRONTEND (Streamlit app.py)
+                                     |
                [ View Results & Download PDF QC Report ]
 ```
 
@@ -102,21 +102,30 @@ The core intelligence is powered by **YOLOv8** trained specifically on textile f
 
 ```directory
 final_project/
-├── .gitignore              # Tells Git which files to ignore (cache, uploads, reports, models)
-├── Analysis.py             # Defect statistical analysis and summary aggregation
-├── Detection.py            # YOLOv8 inference and image/video frame processing
-├── Fast_api.py             # FastAPI REST server providing prediction and report endpoints
-├── Report.py               # ReportLab PDF and HTML report generation engine
-├── Tracking.py             # ByteTrack defect tracking data structure builder
-├── api_client.py           # Streamlit HTTP client wrapper for FastAPI communication
-├── app.py                  # Streamlit main frontend application
-├── best.pt                 # Trained YOLOv8 model weights (~22 MB)
-├── README.md               # Project documentation and setup guide
-├── requirements.txt        # List of Python dependencies
-├── ui_components.py        # Custom industrial UI layout, metrics, and dataframe components
-├── reports/                # [Runtime] Storage for generated PDF, JSON, and HTML reports
-├── uploaded_images/        # [Runtime] Temporary storage for uploaded image files
-└── uploaded_videos/        # [Runtime] Temporary storage for uploaded video files
+├── .gitignore                    # Tells Git which files to ignore (cache, uploads, reports)
+├── Fast_api.py                   # FastAPI REST server providing prediction and report endpoints
+├── app.py                        # Streamlit main frontend application
+├── best.pt                       # Trained YOLOv8 model weights (~22 MB)
+├── README.md                     # Project documentation and setup guide
+├── requirements.txt              # List of Python dependencies
+│
+├── src/                          # Core Python application modules
+│   ├── __init__.py
+│   ├── Analysis.py               # Defect statistical analysis and summary aggregation
+│   ├── Detection.py              # YOLOv8 inference and image/video frame processing
+│   ├── Report.py                 # ReportLab PDF and HTML report generation engine
+│   ├── Tracking.py               # ByteTrack defect tracking data structure builder
+│   ├── api_client.py             # Streamlit HTTP client wrapper for FastAPI communication
+│   └── ui_components.py          # Custom industrial UI layout, metrics, and dataframe components
+│
+├── notebooks/                    # Data Science & Machine Learning notebooks
+│   ├── 01_EDA.ipynb              # Exploratory Data Analysis (EDA) notebook
+│   ├── 02_Model_Training.ipynb   # YOLOv8 model training notebook
+│   └── 03_Model_Evaluation.ipynb # YOLOv8 model evaluation & metrics notebook
+│
+├── uploaded_images/              # [Runtime] Temporary storage for uploaded image files
+├── uploaded_videos/              # [Runtime] Temporary storage for uploaded video files
+└── reports/                      # [Runtime] Storage for generated PDF, JSON, and HTML reports
 ```
 
 ---
@@ -189,8 +198,6 @@ final_project/
 - **GitHub**: [@Musa-kazmi](https://github.com/Musa-kazmi)
 - **LinkedIn**: [Musa Kazmi](https://www.linkedin.com/in/musa-kazmi-6b99973b4)
 - **Email**: kazmi6261@gmail.com
-
----
 
 ## 📄 10. License
 
