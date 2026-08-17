@@ -131,7 +131,7 @@ final_project/
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/Textile-Fabric-Defect-Detection-QC-System.git
+   git clone https://github.com/Musa-kazmi/Textile-Fabric-Defect-Detection-QC-System.git
    cd Textile-Fabric-Defect-Detection-QC-System
    ```
 
@@ -186,8 +186,9 @@ final_project/
 ## 👤 9. Author
 
 - **Musa Kazmi**
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [@your-profile](https://linkedin.com/in/your-profile)
+- **GitHub**: [@Musa-kazmi](https://github.com/Musa-kazmi)
+- **LinkedIn**: [Musa Kazmi](https://www.linkedin.com/in/musa-kazmi-6b99973b4)
+- **Email**: kazmi6261@gmail.com
 
 ---
 
