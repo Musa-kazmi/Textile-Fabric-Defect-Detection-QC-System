@@ -9,7 +9,7 @@
 [![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-5C3EE8.svg)](https://opencv.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Automated industrial textile fabric defect detection, multi-object tracking, and automated PDF QC report generation powered by YOLOv8, ByteTrack, FastAPI, and Streamlit.**
+**An end-to-end industrial quality control system combining YOLOv8 Deep Learning detection, ByteTrack multi-object tracking, OpenCV image registration & print comparison, and automated PDF Quality Control (QC) reporting.**
 
 </div>
 
@@ -17,9 +17,14 @@
 
 ## 📖 1. About & Project Overview
 
-Textile manufacturing plants face significant quality control challenges when manually inspecting fabrics for flaws like stains, holes, cuts, contamination, color variations, or gray stitches. Manual inspection is slow, prone to human error, and lacks standardized reporting.
+Textile manufacturing and garment printing industries face critical quality assurance challenges. Flaws such as holes, cuts, color staining, gray stitches, contamination, or missing print patterns can compromise entire production batches if undetected.
 
-**Textile Fabric Defect Detection & QC System** automates this entire pipeline. Using a fine-tuned **YOLOv8** computer vision model combined with **ByteTrack** multi-object tracking, the system detects and tracks fabric flaws in real-time across images, videos, and live webcam feeds. It automatically generates formal, industry-grade **PDF Quality Control (QC) Reports** with complete spatial defect counts, confidence scores, and bounding box annotations accessible via a clean Streamlit dashboard backed by a RESTful FastAPI backend.
+**Textile Fabric Defect Detection & QC System** is an end-to-end inspection platform designed to automate and standardize this process with two specialized inspection engines:
+
+1. **Deep Learning Engine (YOLOv8 + ByteTrack):** Detects surface-level fabric anomalies (stains, cuts, holes, contaminations) across static images, moving video rolls, and live webcam streams with persistent object tracking.
+2. **Computer Vision Engine (OpenCV Image Registration & Difference Analysis):** Compares a factory manufactured print against a reference ground-truth design, performs sub-pixel alignment, and highlights missing, blurred, or defective print regions.
+
+Both engines feed into an automated **ReportLab PDF generation engine**, producing formal inspection documentation with defect tables, bounding boxes, and compliance statuses.
 
 ---
 
@@ -27,13 +32,14 @@ Textile manufacturing plants face significant quality control challenges when ma
 
 | Feature | Description |
 | :--- | :--- |
-| **📷 Image Defect Detection** | Upload fabric images (JPG, JPEG, PNG) for instant defect detection and spatial bounding box overlays. |
-| **🎬 Video Inspection & Tracking** | Process fabric rolls in motion using YOLOv8 + ByteTrack to count unique defects without double-counting. |
-| **📹 Live Camera Mode** | Capture live fabric samples from a webcam feed for real-time quality control checks. |
-| **🖼️ Annotated Output** | Returns rendered images with bounding boxes drawn directly around detected defects. |
-| **📄 Automatic PDF QC Reports** | Generates downloadable, formal PDF quality control reports with defect breakdowns and metrics. |
-| **📊 Defect Analytics & Metrics** | Displays total defect counts, unique defect types, most common flaw, and confidence scores. |
-| **🔌 Decoupled REST API** | Fully decoupled architecture using FastAPI HTTP REST endpoints to handle model inference. |
+| **📷 Image Defect Detection** | Upload single fabric images (JPG, JPEG, PNG) for instant YOLOv8 inference and spatial defect localization. |
+| **🎬 Video Inspection & Tracking** | Track defects across moving fabric conveyor lines with ByteTrack to calculate unique defect counts without duplicates. |
+| **📹 Live Camera & Video Recorder** | Capture live frames or record conveyor video directly in the browser for immediate quality assessment. |
+| **🖨️ OpenCV Print Inspection** | Compare a Reference print against a Factory print with automatic ORB/ECC alignment to detect missing print defects. |
+| **🖼️ Annotated Defect Visuals** | Generates high-resolution annotated images with labeled bounding boxes and defect metrics. |
+| **📄 Automated PDF QC Reports** | Generates downloadable, formal industrial PDF reports containing defect breakdowns, metrics, and timestamps. |
+| **📊 Defect Analytics & Metrics** | Live metrics for total defects, defect class breakdown, unique counts, most frequent flaw, and PASS/FAIL rating. |
+| **🔌 Decoupled REST API** | FastAPI backend exposing REST endpoints for prediction, image retrieval, and PDF document generation. |
 
 ---
 
@@ -41,139 +47,145 @@ Textile manufacturing plants face significant quality control challenges when ma
 
 | Technology | Purpose |
 | :--- | :--- |
-| **Python** | Primary programming language |
+| **Python** | Core programming language |
 | **FastAPI / Uvicorn** | High-performance asynchronous REST API backend |
-| **Streamlit** | Modern industrial frontend dashboard |
-| **YOLOv8 (Ultralytics)** | Deep learning object detection model |
-| **ByteTrack** | Real-time multi-object defect tracking across video frames |
-| **OpenCV** | Image & video processing, frame annotation, and bounding box drawing |
-| **ReportLab** | Automated PDF Quality Control report generation |
-| **Pandas & NumPy** | Data manipulation and statistical calculations |
-| **Requests** | HTTP client for Streamlit to FastAPI communication |
+| **Streamlit** | Industrial quality control dashboard frontend |
+| **YOLOv8 (Ultralytics)** | Deep learning object detection for fabric surface flaws |
+| **ByteTrack** | Persistent multi-object tracking across video frames |
+| **OpenCV (`cv2`)** | Feature alignment (ORB), perspective warping, color difference masking, and contour detection |
+| **ReportLab** | Formal PDF Quality Control report compilation |
+| **NumPy & Pandas** | Image matrix processing, defect tabular structures, and analytics |
+| **Pillow (PIL)** | Image manipulation and format conversions |
+| **Requests** | HTTP client for Streamlit-to-FastAPI communication |
 
 ---
 
-## 🧠 4. Model & Detection Pipeline
-
-The core intelligence is powered by **YOLOv8** trained specifically on textile fabric defect datasets to recognize common defect classes such as *Stain*, *Contamination*, *Color Issues*, *Gray Stitch*, *Cut*, and *Hole*.
-
-| Component | Responsibility |
-| :--- | :--- |
-| **YOLOv8 Engine** | Locates defects in individual frames/images and produces bounding box coordinates `[x1, y1, x2, y2]`. |
-| **ByteTrack Tracker** | Assigns persistent Track IDs (`D001`, `D002`, etc.) across moving video frames to prevent duplicate counts. |
-| **Defect Analyzer** | Categorizes spatial placement (e.g., *Top-Left*, *Middle-Center*) and calculates confidence metrics. |
-| **Report Engine** | Compiles defect counts into formatted JSON, HTML, and printable PDF documents. |
-
----
-
-## 📈 5. Pipeline Architecture & Workflow
+## 🧠 4. Inspection Engines & Detection Pipelines
 
 ```
-                        FRONTEND (Streamlit app.py)
-                                     |
-            +------------------------+------------------------+
-            |                        |                        |
-       IMAGE UPLOAD             VIDEO UPLOAD             LIVE CAMERA
-            |                        |                        |
-            +------------------------+------------------------+
-                                     |
-                                 HTTP POST
-                                     |
-                         BACKEND (FastAPI Fast_api.py)
-                                     |
-                           YOLOv8 + OpenCV (src/)
-                                     |
-                                 ByteTrack
-                                     |
-                              Defect Analysis
-                                     |
-                            PDF Report Generation
-                                     |
-                                 HTTP GET
-                                     |
-                        FRONTEND (Streamlit app.py)
-                                     |
-               [ View Results & Download PDF QC Report ]
+                                  INSPECTION MODES
+                                         │
+        ┌────────────────────────────────┴────────────────────────────────┐
+        ▼                                                                 ▼
+[ Deep Learning Pipeline ]                                   [ OpenCV Print Inspection Pipeline ]
+  • YOLOv8 Detection                                           • Image Preprocessing & Grayscale
+  • ByteTrack Multi-Object Tracking                            • Feature Extraction & Alignment (ORB/ECC)
+  • Spatial Defect Localization                                • Color / Saturation Difference Masking
+  • Classes: Stain, Cut, Hole, etc.                            • Missing Print Contour Extraction
+        │                                                                 │
+        └────────────────────────────────┬────────────────────────────────┘
+                                         ▼
+                             [ Defect Analytics Engine ]
+                                         ▼
+                            [ PDF QC Report Generator ]
 ```
+
+### 1. Deep Learning Surface Detection (`src/`)
+* **YOLOv8 Inference:** Identifies fabric flaws, producing normalized bounding boxes `[x1, y1, x2, y2]`.
+* **ByteTrack Association:** Assigns persistent Track IDs (`D001`, `D002`...) across consecutive video frames to prevent over-counting.
+* **Spatial Categorization:** Maps defect placement (e.g., *Top-Left*, *Center-Middle*, *Bottom-Right*).
+
+### 2. OpenCV Print Comparison (`opencv/`)
+* **Preprocessing & Alignment (`alignment.py`):** Uses ORB feature matching and Homography transformations to align the factory image with the reference design regardless of camera tilt or scale.
+* **Missing Print Detection (`detection.py`):** Calculates saturation and color difference masks to extract missing pattern contours.
+* **Defect Analyzer (`defect_analysis.py`):** Quantifies defective area sizes in pixels, determines pass/fail thresholds, and normalizes coordinates.
+* **Print QC Reporter (`qc_reprt.py`):** Compiles specialized side-by-side comparison metrics into printable PDF records.
 
 ---
 
-## 🗂️ 6. Project Structure
+## 🗂️ 5. Project Structure
 
 ```directory
 final_project/
-├── .gitignore                    # Tells Git which files to ignore (cache, uploads, reports)
-├── Fast_api.py                   # FastAPI REST server providing prediction and report endpoints
-├── app.py                        # Streamlit main frontend application
-├── best.pt                       # Trained YOLOv8 model weights (~22 MB)
-├── README.md                     # Project documentation and setup guide
-├── requirements.txt              # List of Python dependencies
+├── .gitignore                      # Git ignore file for cache, temporary uploads, and generated reports
+├── Fast_api.py                     # FastAPI server hosting YOLOv8 and OpenCV prediction endpoints
+├── app.py                          # Streamlit UI dashboard with 4 inspection modes
+├── best.pt                         # Fine-tuned YOLOv8 model weights (~22 MB)
+├── README.md                       # Comprehensive system documentation and architecture guide
+├── requirements.txt                # Python package dependencies
 │
-├── src/                          # Core Python application modules
+├── src/                            # YOLOv8 Deep Learning & Core Frontend Modules
 │   ├── __init__.py
-│   ├── Analysis.py               # Defect statistical analysis and summary aggregation
-│   ├── Detection.py              # YOLOv8 inference and image/video frame processing
-│   ├── Report.py                 # ReportLab PDF and HTML report generation engine
-│   ├── Tracking.py               # ByteTrack defect tracking data structure builder
-│   ├── api_client.py             # Streamlit HTTP client wrapper for FastAPI communication
-│   └── ui_components.py          # Custom industrial UI layout, metrics, and dataframe components
+│   ├── Analysis.py                 # Defect metrics aggregation and statistical summaries
+│   ├── Detection.py                # YOLOv8 inference on single images and video streams
+│   ├── Report.py                   # ReportLab PDF & HTML generation engine for YOLO detections
+│   ├── Tracking.py                 # ByteTrack tracking integration and track record builder
+│   ├── api_client.py               # Streamlit HTTP client interface connecting to FastAPI
+│   ├── ui_components.py            # Custom UI cards, responsive tables, and adaptive CSS theme
+│   └── camera_component/           # Custom HTML5/JS webcam component for in-browser recording
+│       └── index.html
 │
-├── notebooks/                    # Data Science & Machine Learning notebooks
-│   ├── 01_EDA.ipynb              # Exploratory Data Analysis (EDA) notebook
-│   ├── 02_Model_Training.ipynb   # YOLOv8 model training notebook
-│   └── 03_Model_Evaluation.ipynb # YOLOv8 model evaluation & metrics notebook
+├── opencv/                         # Traditional Computer Vision & Print Inspection Modules
+│   ├── __init__.py
+│   ├── alignment.py                # ORB feature detection, homography matrix & perspective warping
+│   ├── preprocessing.py            # Image grayscale conversion, sizing, and normalization
+│   ├── detection.py                # Missing print defect segmentation and bounding box drawer
+│   ├── defect_analysis.py          # Defect severity calculation and status determination (PASS/FAIL)
+│   ├── qc_reprt.py                 # Dedicated PDF report generator for print comparison
+│   ├── input.py                    # Input image validation and file reading utilities
+│   ├── main.py                     # Standalone CLI entrypoint for local OpenCV testing
+│   └── sample_images/              # Reference and factory defect print test samples
 │
-├── uploaded_images/              # [Runtime] Temporary storage for uploaded image files
-├── uploaded_videos/              # [Runtime] Temporary storage for uploaded video files
-└── reports/                      # [Runtime] Storage for generated PDF, JSON, and HTML reports
+├── notebooks/                      # Data Science & Machine Learning Research
+│   ├── 01_EDA.ipynb                # Exploratory Data Analysis on textile defect dataset
+│   ├── 02_Model_Training.ipynb     # YOLOv8 fine-tuning and training routines
+│   └── 03_Model_Evaluation.ipynb   # Precision, Recall, and mAP performance evaluation
+│
+├── uploaded_images/                # [Runtime] Storage for incoming uploaded image files
+├── uploaded_videos/                # [Runtime] Storage for incoming video files
+└── reports/                        # [Runtime] Storage for generated annotated images, JSON, and PDF reports
 ```
 
 ---
 
-## 🚀 7. Quick Start Guide
+## 🚀 6. Quick Start Guide
 
 ### Prerequisites
-- Python 3.10 - 3.12 installed on your system.
-- Git installed on your system.
+* Python `3.10`, `3.11`, or `3.12` installed.
+* Git installed.
 
 ### Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Musa-kazmi/Textile-Fabric-Defect-Detection-QC-System.git
+   git clone https://github.com/your-Musa-kazmi/Textile-Fabric-Defect-Detection-QC-System.git
    cd Textile-Fabric-Defect-Detection-QC-System
    ```
 
-2. **Create a virtual environment (Recommended):**
+2. **Create and activate a virtual environment:**
    ```bash
-   # Create environment
+   # Windows
    python -m venv venv
-   
-   # Activate environment (Windows)
    .\venv\Scripts\activate
-   
-   # Activate environment (Linux/macOS)
+
+   # Linux / macOS
+   python3 -m venv venv
    source venv/bin/activate
    ```
 
-3. **Install required packages:**
+3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-### How to Run
+---
 
-1. **Start the FastAPI Backend (Terminal 1):**
-   ```bash
-   uvicorn Fast_api:app --reload --port 8000
-   ```
-   *Backend runs at: [http://127.0.0.1:8000](http://127.0.0.1:8000)*
+## 🖥️ 7. Running the Application
 
-2. **Start the Streamlit Frontend (Terminal 2):**
-   ```bash
-   streamlit run app.py --server.port 8501
-   ```
-   *Frontend opens at: [http://localhost:8501](http://localhost:8501)*
+The system requires running both the **FastAPI Backend** and the **Streamlit Frontend**:
+
+### Step 1: Launch FastAPI Backend
+```bash
+python -m uvicorn Fast_api:app --port 8000 --host 127.0.0.1
+```
+* API Server: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
+* Interactive API Documentation (Swagger UI): **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)**
+
+### Step 2: Launch Streamlit Dashboard
+```bash
+streamlit run app.py --server.port 8501
+```
+* Dashboard URL: **[http://localhost:8501](http://localhost:8501)**
 
 ---
 
@@ -181,14 +193,15 @@ final_project/
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/` | API status check |
-| `GET` | `/health` | Verification of all pipeline modules |
-| `POST` | `/predict/image` | Analyzes image file and returns defect list, summary, and annotated image URL |
-| `POST` | `/predict` | Processes video file using YOLOv8 + ByteTrack and returns full QC statistics |
-| `GET` | `/report/{report_id}/pdf` | Downloads the generated PDF Quality Control report |
-| `GET` | `/report/{report_id}/image` | Fetches the annotated image with bounding boxes drawn |
-| `GET` | `/report/{report_id}/json` | Fetches raw JSON report data |
-| `GET` | `/report/{report_id}/html` | Fetches HTML version of the QC report |
+| `GET` | `/` | API status and root greeting |
+| `GET` | `/health` | Health check verifying status of all connected modules |
+| `POST` | `/predict/image` | Analyzes a single image for defects using YOLOv8 |
+| `POST` | `/predict` | Processes video rolls with YOLOv8 detection + ByteTrack tracking |
+| `POST` | `/predict/print-inspection` | Compares Reference vs. Factory prints using OpenCV image registration |
+| `GET` | `/report/{report_id}/image` | Fetches the annotated image with rendered defect bounding boxes |
+| `GET` | `/report/{report_id}/pdf` | Downloads the generated Quality Control PDF report |
+| `GET` | `/report/{report_id}/json` | Fetches raw defect JSON records and metadata |
+| `GET` | `/report/{report_id}/html` | Fetches the HTML-rendered QC report |
 
 ---
 
@@ -198,6 +211,8 @@ final_project/
 - **GitHub**: [@Musa-kazmi](https://github.com/Musa-kazmi)
 - **LinkedIn**: [Musa Kazmi](https://www.linkedin.com/in/musa-kazmi-6b99973b4)
 - **Email**: kazmi6261@gmail.com
+
+---
 
 ## 📄 10. License
 
