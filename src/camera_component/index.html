@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; color: #f1f5f9; background: transparent; }
+        .container { padding: 1.25rem; background: #1e293b; border-radius: 8px; border: 1px solid #334155; }
+        .title { font-weight: 600; font-size: 0.9rem; color: #06b6d4; margin-bottom: 0.75rem; }
+        video { width: 100%; max-height: 320px; background: #0f172a; border-radius: 6px; border: 1px solid #334155; object-fit: cover; display: block; }
+        .btn-group { margin-top: 0.75rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+        button { border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease; }
+        .btn-start { background: #06b6d4; color: white; }
+        .btn-start:hover:not(:disabled) { background: #0891b2; }
+        .btn-stop { background: #ef4444; color: white; }
+        .btn-stop:hover:not(:disabled) { background: #dc2626; }
+        .btn-analyze { background: #10b981; color: white; font-size: 0.95rem; padding: 0.75rem 1.5rem; width: 100%; justify-content: center; margin-top: 0.5rem; }
+        .btn-analyze:hover:not(:disabled) { background: #059669; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .status { font-size: 0.85rem; color: #94a3b8; font-weight: 500; }
+        .preview-box { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #334155; }
+        .success-text { font-weight: 600; font-size: 0.85rem; color: #10b981; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🎥 Live Camera Feed &amp; Video Recorder</div>
+        <video id="webcam" autoplay muted playsinline></video>
+        <div class="btn-group">
+            <button id="startBtn" class="btn-start" onclick="startRecording()">🎥 Start Recording</button>
+            <button id="stopBtn" class="btn-stop" onclick="stopRecording()" disabled>⏹️ Stop Recording</button>
+            <span id="status" class="status">Initializing camera...</span>
+        </div>
+
+        <div id="recordedBox" class="preview-box" style="display: none;">
+            <div class="success-text">✅ Video Recorded! Preview below, then click Analyze:</div>
+            <video id="recordedVideo" controls style="max-height: 280px; margin-bottom: 0.75rem;"></video>
+            <button id="analyzeBtn" class="btn-analyze" onclick="submitVideo()">🔍 Analyze Recorded Video for Defects</button>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // Streamlit Component Communication Protocol
+        // =====================================================
+
+        function sendMessageToStreamlit(type, data) {
+            const outData = Object.assign({
+                isStreamlitMessage: true,
+                type: type,
+            }, data);
+            window.parent.postMessage(outData, "*");
+        }
+
+        function componentReady() {
+            sendMessageToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+        }
+
+        function setFrameHeight(height) {
+            sendMessageToStreamlit("streamlit:setFrameHeight", { height: height });
+        }
+
+        function setComponentValue(value) {
+            sendMessageToStreamlit("streamlit:setComponentValue", { value: value });
+        }
+
+        // Listen for render events from Streamlit
+        window.addEventListener("message", function(event) {
+            if (event.data.type === "streamlit:render") {
+                // On each render, update height
+                onRender();
+            }
+        });
+
+        function onRender() {
+            setTimeout(function() {
+                setFrameHeight(document.body.scrollHeight + 20);
+            }, 100);
+        }
+
+        // =====================================================
+        // Webcam Video Recorder Logic
+        // =====================================================
+
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+        let recordedBlob;
+        let startTime;
+        let timerInterval;
+
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                document.getElementById("webcam").srcObject = stream;
+                document.getElementById("status").innerText = "🟢 Camera Ready — Click Start Recording";
+                onRender();
+            } catch (err) {
+                document.getElementById("status").innerText = "⚠️ Camera access denied: " + err.message;
+            }
+        }
+
+        function startRecording() {
+            recordedChunks = [];
+            document.getElementById("recordedBox").style.display = "none";
+
+            let options = { mimeType: "video/webm;codecs=vp9" };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: "video/webm" };
+            }
+            try {
+                mediaRecorder = new MediaRecorder(stream, options);
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
+
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) recordedChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = function() {
+                clearInterval(timerInterval);
+                recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+                var url = URL.createObjectURL(recordedBlob);
+                document.getElementById("recordedVideo").src = url;
+                document.getElementById("recordedBox").style.display = "block";
+                document.getElementById("analyzeBtn").disabled = false;
+                document.getElementById("analyzeBtn").innerText = "🔍 Analyze Recorded Video for Defects";
+                document.getElementById("status").innerText = "✅ Recording complete! Click Analyze below.";
+                onRender();
+            };
+
+            mediaRecorder.start(100);
+            startTime = Date.now();
+
+            timerInterval = setInterval(function() {
+                var elapsed = Math.floor((Date.now() - startTime) / 1000);
+                var mins = Math.floor(elapsed / 60);
+                var secs = elapsed % 60;
+                var timeStr = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+                document.getElementById("status").innerText = "🔴 Recording... " + timeStr;
+            }, 1000);
+
+            document.getElementById("startBtn").disabled = true;
+            document.getElementById("stopBtn").disabled = false;
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("stopBtn").disabled = true;
+        }
+
+        function submitVideo() {
+            if (!recordedBlob) return;
+            document.getElementById("analyzeBtn").disabled = true;
+            document.getElementById("analyzeBtn").innerText = "⏳ Sending to server for analysis...";
+            document.getElementById("status").innerText = "⏳ Processing video...";
+
+            var reader = new FileReader();
+            reader.readAsDataURL(recordedBlob);
+            reader.onloadend = function() {
+                setComponentValue(reader.result);
+            };
+        }
+
+        // =====================================================
+        // Init
+        // =====================================================
+
+        componentReady();
+        initCamera();
+    </script>
+</body>
+</html>
